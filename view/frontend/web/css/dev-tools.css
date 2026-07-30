@@ -1,0 +1,516 @@
+/*
+ * Modracx Frontend Dev Tools
+ *
+ * This stylesheet lands on top of a theme that has already styled every element it uses, and
+ * it has to look the same on Luma, Hyva and Breeze. So: everything is scoped under #mdx-fdt,
+ * every property that a theme is likely to have set is stated rather than inherited, and the
+ * bar sits in its own stacking context so a theme's own z-index ladder cannot climb over it.
+ */
+
+#mdx-fdt {
+    --mdx-bg: #17161c;
+    --mdx-bg-raised: #1f1e26;
+    --mdx-bg-sunken: #131218;
+    --mdx-border: #2f2d3a;
+    --mdx-text: #e6e4ef;
+    --mdx-text-dim: #9d99b0;
+    --mdx-accent: #7c6cf0;
+    --mdx-ok: #45c08a;
+    --mdx-low: #6c8ef0;
+    --mdx-medium: #e0a641;
+    --mdx-high: #e8743c;
+    --mdx-critical: #e04f5f;
+    --mdx-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900000;
+    isolation: isolate;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--mdx-text);
+    text-align: left;
+    direction: ltr;
+    box-sizing: border-box;
+}
+
+#mdx-fdt *,
+#mdx-fdt *::before,
+#mdx-fdt *::after {
+    box-sizing: border-box;
+}
+
+#mdx-fdt[hidden] {
+    display: none;
+}
+
+/* ---------------------------------------------------------------- the bar */
+
+#mdx-fdt .mdx-fdt__bar {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    min-height: 30px;
+    padding: 0 4px;
+    background: var(--mdx-bg);
+    border-top: 1px solid var(--mdx-border);
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, .35);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+#mdx-fdt button {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--mdx-text);
+    font: inherit;
+    letter-spacing: 0;
+    text-transform: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .12s ease;
+}
+
+#mdx-fdt button:hover,
+#mdx-fdt button:focus-visible {
+    background: var(--mdx-bg-raised);
+    outline: none;
+}
+
+#mdx-fdt button:focus-visible {
+    box-shadow: inset 0 0 0 1px var(--mdx-accent);
+}
+
+#mdx-fdt .mdx-fdt__brand {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--mdx-text-dim);
+    border-right: 1px solid var(--mdx-border);
+}
+
+#mdx-fdt .mdx-fdt__brand:hover {
+    color: var(--mdx-text);
+}
+
+#mdx-fdt .mdx-fdt__stack {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--mdx-bg-raised);
+    color: var(--mdx-text-dim);
+    font-weight: 600;
+    letter-spacing: .02em;
+}
+
+/*
+ * The dot carries the severity of the whole run. It is on the launcher rather than inside a
+ * panel because a warning you have to open something to find is not a warning.
+ */
+#mdx-fdt .mdx-fdt__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--mdx-ok);
+    box-shadow: 0 0 6px currentColor;
+    color: var(--mdx-ok);
+}
+
+#mdx-fdt.mdx-fdt--low .mdx-fdt__dot { background: var(--mdx-low); color: var(--mdx-low); }
+#mdx-fdt.mdx-fdt--medium .mdx-fdt__dot { background: var(--mdx-medium); color: var(--mdx-medium); }
+#mdx-fdt.mdx-fdt--high .mdx-fdt__dot { background: var(--mdx-high); color: var(--mdx-high); }
+#mdx-fdt.mdx-fdt--critical .mdx-fdt__dot { background: var(--mdx-critical); color: var(--mdx-critical); }
+
+#mdx-fdt .mdx-fdt__chip-label,
+#mdx-fdt .mdx-fdt__chip-unit {
+    color: var(--mdx-text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+#mdx-fdt .mdx-fdt__chip-value {
+    font-family: var(--mdx-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+#mdx-fdt .mdx-fdt__chip--hit .mdx-fdt__chip-value { color: var(--mdx-ok); }
+#mdx-fdt .mdx-fdt__chip--miss .mdx-fdt__chip-value { color: var(--mdx-medium); }
+#mdx-fdt .mdx-fdt__chip--uncacheable .mdx-fdt__chip-value { color: var(--mdx-critical); }
+
+#mdx-fdt.mdx-fdt--high .mdx-fdt__chip--issues .mdx-fdt__chip-value,
+#mdx-fdt.mdx-fdt--critical .mdx-fdt__chip--issues .mdx-fdt__chip-value {
+    color: var(--mdx-critical);
+}
+
+/* The toolbar's own cost. Dimmed on purpose — it is context for the other chips, not a metric
+   about the page, and it should never compete with them for attention. */
+#mdx-fdt .mdx-fdt__chip--self .mdx-fdt__chip-value {
+    color: var(--mdx-text-dim);
+}
+
+#mdx-fdt .mdx-fdt__spacer {
+    flex: 1 1 auto;
+}
+
+#mdx-fdt .mdx-fdt__icon {
+    color: var(--mdx-text-dim);
+    font-size: 11px;
+}
+
+/* ------------------------------------------------------------- the drawer */
+
+#mdx-fdt .mdx-fdt__drawer {
+    display: flex;
+    flex-direction: column;
+    height: 46vh;
+    min-height: 220px;
+    background: var(--mdx-bg-sunken);
+    border-top: 1px solid var(--mdx-border);
+}
+
+#mdx-fdt .mdx-fdt__drawer[hidden] {
+    display: none;
+}
+
+/* Says the panels are describing a stored run rather than the page on screen. */
+#mdx-fdt .mdx-fdt__banner {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: rgba(124, 108, 240, .14);
+    border-bottom: 1px solid var(--mdx-border);
+    color: var(--mdx-text);
+    font-size: 11px;
+}
+
+#mdx-fdt .mdx-fdt__banner[hidden] {
+    display: none;
+}
+
+#mdx-fdt .mdx-fdt__banner button {
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--mdx-accent);
+    color: #12111a;
+    font-weight: 600;
+}
+
+#mdx-fdt .mdx-clickable {
+    cursor: pointer;
+}
+
+#mdx-fdt .mdx-clickable:hover td {
+    background: rgba(124, 108, 240, .16);
+}
+
+#mdx-fdt .mdx-fdt__tabs {
+    display: flex;
+    gap: 0;
+    flex: 0 0 auto;
+    background: var(--mdx-bg);
+    border-bottom: 1px solid var(--mdx-border);
+    overflow-x: auto;
+}
+
+#mdx-fdt .mdx-fdt__tab {
+    padding: 7px 12px;
+    color: var(--mdx-text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+}
+
+#mdx-fdt .mdx-fdt__tab[aria-selected="true"] {
+    color: var(--mdx-text);
+    border-bottom-color: var(--mdx-accent);
+    background: var(--mdx-bg-sunken);
+}
+
+#mdx-fdt .mdx-fdt__body {
+    flex: 1 1 auto;
+    padding: 10px 12px 16px;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+#mdx-fdt .mdx-fdt__body:focus {
+    outline: none;
+}
+
+#mdx-fdt .mdx-fdt__empty {
+    margin: 0;
+    padding: 24px 0;
+    color: var(--mdx-text-dim);
+    text-align: center;
+}
+
+/* -------------------------------------------------------- panel internals */
+
+#mdx-fdt h3 {
+    margin: 14px 0 6px;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--mdx-text-dim);
+}
+
+#mdx-fdt h3:first-child {
+    margin-top: 0;
+}
+
+#mdx-fdt p {
+    margin: 0 0 8px;
+    color: var(--mdx-text-dim);
+}
+
+#mdx-fdt code,
+#mdx-fdt pre {
+    font-family: var(--mdx-mono);
+    font-size: 11px;
+    color: var(--mdx-text);
+    background: transparent;
+    border: 0;
+    padding: 0;
+}
+
+#mdx-fdt pre {
+    margin: 4px 0;
+    padding: 8px 10px;
+    background: var(--mdx-bg);
+    border: 1px solid var(--mdx-border);
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+#mdx-fdt table {
+    width: 100%;
+    margin: 0 0 10px;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+#mdx-fdt th,
+#mdx-fdt td {
+    padding: 4px 8px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--mdx-border);
+    color: var(--mdx-text);
+}
+
+#mdx-fdt th {
+    position: sticky;
+    top: -10px;
+    background: var(--mdx-bg-sunken);
+    color: var(--mdx-text-dim);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+#mdx-fdt td.mdx-num {
+    font-family: var(--mdx-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+#mdx-fdt tr:hover td {
+    background: var(--mdx-bg-raised);
+}
+
+/* metric cards */
+
+#mdx-fdt .mdx-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+#mdx-fdt .mdx-card {
+    padding: 8px 10px;
+    background: var(--mdx-bg);
+    border: 1px solid var(--mdx-border);
+    border-radius: 4px;
+}
+
+#mdx-fdt .mdx-card__label {
+    display: block;
+    color: var(--mdx-text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+#mdx-fdt .mdx-card__value {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--mdx-mono);
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+#mdx-fdt .mdx-card__note {
+    display: block;
+    color: var(--mdx-text-dim);
+    font-size: 10px;
+}
+
+/* severity */
+
+#mdx-fdt .mdx-sev {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #12111a;
+}
+
+#mdx-fdt .mdx-sev--low { background: var(--mdx-low); }
+#mdx-fdt .mdx-sev--medium { background: var(--mdx-medium); }
+#mdx-fdt .mdx-sev--high { background: var(--mdx-high); }
+#mdx-fdt .mdx-sev--critical { background: var(--mdx-critical); }
+#mdx-fdt .mdx-sev--ok { background: var(--mdx-ok); }
+
+/* findings */
+
+#mdx-fdt .mdx-finding {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: var(--mdx-bg);
+    border: 1px solid var(--mdx-border);
+    border-left: 3px solid var(--mdx-border);
+    border-radius: 4px;
+}
+
+#mdx-fdt .mdx-finding--low { border-left-color: var(--mdx-low); }
+#mdx-fdt .mdx-finding--medium { border-left-color: var(--mdx-medium); }
+#mdx-fdt .mdx-finding--high { border-left-color: var(--mdx-high); }
+#mdx-fdt .mdx-finding--critical { border-left-color: var(--mdx-critical); }
+
+#mdx-fdt .mdx-finding__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#mdx-fdt .mdx-finding__title {
+    font-weight: 600;
+}
+
+#mdx-fdt .mdx-finding__saving {
+    margin-left: auto;
+    font-family: var(--mdx-mono);
+    color: var(--mdx-ok);
+}
+
+#mdx-fdt .mdx-finding__origin {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--mdx-mono);
+    font-size: 10px;
+    color: var(--mdx-accent);
+    word-break: break-all;
+}
+
+#mdx-fdt .mdx-finding__fix {
+    margin: 6px 0 0;
+    padding-top: 6px;
+    border-top: 1px dashed var(--mdx-border);
+    color: var(--mdx-text-dim);
+}
+
+#mdx-fdt details {
+    margin-top: 4px;
+}
+
+#mdx-fdt summary {
+    cursor: pointer;
+    color: var(--mdx-text-dim);
+    font-size: 10px;
+    list-style: revert;
+}
+
+/* the block tree */
+
+#mdx-fdt .mdx-tree-name {
+    font-family: var(--mdx-mono);
+    white-space: nowrap;
+}
+
+#mdx-fdt .mdx-dim {
+    color: var(--mdx-text-dim);
+}
+
+#mdx-fdt .mdx-warn {
+    color: var(--mdx-medium);
+}
+
+#mdx-fdt .mdx-bad {
+    color: var(--mdx-critical);
+}
+
+#mdx-fdt .mdx-good {
+    color: var(--mdx-ok);
+}
+
+#mdx-fdt .mdx-filter {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 5px 8px;
+    background: var(--mdx-bg);
+    border: 1px solid var(--mdx-border);
+    border-radius: 4px;
+    color: var(--mdx-text);
+    font: inherit;
+}
+
+#mdx-fdt .mdx-filter:focus {
+    outline: none;
+    border-color: var(--mdx-accent);
+}
+
+@media (max-width: 640px) {
+    #mdx-fdt .mdx-fdt__chip-label,
+    #mdx-fdt .mdx-fdt__brand-text {
+        display: none;
+    }
+
+    #mdx-fdt .mdx-fdt__drawer {
+        height: 65vh;
+    }
+}
+
+@media print {
+    #mdx-fdt {
+        display: none;
+    }
+}

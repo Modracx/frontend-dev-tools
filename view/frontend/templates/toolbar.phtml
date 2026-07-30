@@ -1,0 +1,131 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Toolbar $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$summary = $block->getSummary();
+$fpc = (string)($summary['fpc'] ?? 'unknown');
+$stack = $summary['stack'] ?? ['label' => 'Unknown', 'detail' => ''];
+$issues = (int)($summary['issue_count'] ?? 0);
+
+// Better no toolbar than a toolbar whose stylesheet and script 404 into the console.
+$cssUrl = $block->assetUrl('Modracx_FrontendDevTools::css/dev-tools.css');
+$jsUrl = $block->assetUrl('Modracx_FrontendDevTools::js/dev-tools.js');
+
+if ($cssUrl === '' || $jsUrl === '') {
+    return;
+}
+?>
+<link rel="stylesheet" type="text/css" href="<?= $escaper->escapeUrl($cssUrl) ?>"/>
+
+<?php /* Not hidden by default: if the script fails to load, the bar should still be there to say so. */ ?>
+<div id="mdx-fdt" class="mdx-fdt <?= $escaper->escapeHtmlAttr($block->getSeverityClass()) ?>">
+    <script type="application/json" id="mdx-fdt-boot"><?= /* @noEscape */ $block->getBootJson() ?></script>
+
+    <div class="mdx-fdt__bar" role="toolbar" aria-label="<?= $escaper->escapeHtmlAttr(__('Frontend developer tools')) ?>">
+        <button type="button" class="mdx-fdt__brand" data-mdx-panel="overview"
+                aria-expanded="false" aria-controls="mdx-fdt-drawer">
+            <span class="mdx-fdt__dot" aria-hidden="true"></span>
+            <span class="mdx-fdt__brand-text">MODRACX</span>
+            <span class="mdx-fdt__stack"><?= $escaper->escapeHtml($stack['label'] ?? '') ?></span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip" data-mdx-panel="overview"
+                title="<?= $escaper->escapeHtmlAttr(__('Wall clock time from the first line of PHP')) ?>">
+            <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml((string)($summary['duration_ms'] ?? '—')) ?></span>
+            <span class="mdx-fdt__chip-unit">ms</span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip" data-mdx-panel="overview"
+                title="<?= $escaper->escapeHtmlAttr(__('Peak memory')) ?>">
+            <span class="mdx-fdt__chip-value">
+                <?= $escaper->escapeHtml((string)round(((int)($summary['memory_peak_kb'] ?? 0)) / 1024, 1)) ?>
+            </span>
+            <span class="mdx-fdt__chip-unit">MB</span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip" data-mdx-panel="queries"
+                title="<?= $escaper->escapeHtmlAttr(__('Statements and the time spent in them')) ?>">
+            <span class="mdx-fdt__chip-label">SQL</span>
+            <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml((string)($summary['query_count'] ?? 0)) ?></span>
+            <span class="mdx-fdt__chip-unit"><?= $escaper->escapeHtml((string)($summary['query_time_ms'] ?? 0)) ?>ms</span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip" data-mdx-panel="blocks"
+                title="<?= $escaper->escapeHtmlAttr(__('Blocks rendered')) ?>">
+            <span class="mdx-fdt__chip-label"><?= $escaper->escapeHtml(__('Blocks')) ?></span>
+            <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml((string)($summary['block_count'] ?? 0)) ?></span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip mdx-fdt__chip--fpc mdx-fdt__chip--<?= $escaper->escapeHtmlAttr($fpc) ?>"
+                data-mdx-panel="cache"
+                title="<?= $escaper->escapeHtmlAttr(__('Full page cache status for this request')) ?>">
+            <span class="mdx-fdt__chip-label">FPC</span>
+            <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml(strtoupper($fpc)) ?></span>
+        </button>
+
+        <button type="button" class="mdx-fdt__chip mdx-fdt__chip--issues" data-mdx-panel="issues">
+            <span class="mdx-fdt__chip-label"><?= $escaper->escapeHtml(__('Issues')) ?></span>
+            <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml((string)$issues) ?></span>
+            <?php if (!empty($summary['saving_ms'])): ?>
+                <span class="mdx-fdt__chip-unit">−<?= $escaper->escapeHtml((string)$summary['saving_ms']) ?>ms</span>
+            <?php endif; ?>
+        </button>
+
+        <?php $self = $summary['self'] ?? []; ?>
+        <?php if ($self !== []): ?>
+            <?php /* This module's own cost, in the heading — so the numbers beside it can be trusted. */ ?>
+            <button type="button" class="mdx-fdt__chip mdx-fdt__chip--self" data-mdx-panel="overview"
+                    title="<?= $escaper->escapeHtmlAttr(__(
+                        'Time spent inside this toolbar collecting the numbers next to it. '
+                        . 'The page measured %1 ms without it. Excludes plugin interception and '
+                        . 'the toolbar\'s own render — see the Overview tab.',
+                        (string)($self['page_without_ms'] ?? '?')
+                    )) ?>">
+                <span class="mdx-fdt__chip-label"><?= $escaper->escapeHtml(__('Self')) ?></span>
+                <span class="mdx-fdt__chip-value"><?= $escaper->escapeHtml((string)($self['in_page_ms'] ?? 0)) ?></span>
+                <span class="mdx-fdt__chip-unit">ms · <?= $escaper->escapeHtml((string)($self['pct'] ?? 0)) ?>%</span>
+            </button>
+        <?php endif; ?>
+
+        <span class="mdx-fdt__spacer"></span>
+
+        <?php /* On a cache hit there is almost nothing to show; this gets a real page to profile. */ ?>
+        <button type="button" class="mdx-fdt__icon" data-mdx-fresh
+                title="<?= $escaper->escapeHtmlAttr(__('Reload this URL so the full page cache cannot answer it, and profile that')) ?>">
+            <?= $escaper->escapeHtml(__('Fresh')) ?>
+        </button>
+
+        <button type="button" class="mdx-fdt__icon" data-mdx-hints
+                title="<?= $escaper->escapeHtmlAttr(__('Template hints — this browser only')) ?>">
+            <?= $escaper->escapeHtml(__('Hints')) ?>: <span data-mdx-hints-state><?= $escaper->escapeHtml($block->getHintsMode()) ?></span>
+        </button>
+
+        <button type="button" class="mdx-fdt__icon" data-mdx-toggle
+                aria-expanded="false" aria-controls="mdx-fdt-drawer"
+                title="<?= $escaper->escapeHtmlAttr(__('Open the panels')) ?>">▲</button>
+
+        <button type="button" class="mdx-fdt__icon" data-mdx-hide
+                title="<?= $escaper->escapeHtmlAttr(__('Hide until the next page load')) ?>">×</button>
+    </div>
+
+    <div class="mdx-fdt__drawer" id="mdx-fdt-drawer" hidden>
+        <?php /* Populated by the script when the panels stop describing the page on screen. */ ?>
+        <div class="mdx-fdt__banner" data-mdx-banner hidden></div>
+        <div class="mdx-fdt__tabs" role="tablist">
+            <?php foreach ($block->getPanels() as $id => $panel): ?>
+                <button type="button" class="mdx-fdt__tab" role="tab" aria-selected="false"
+                        data-mdx-panel="<?= $escaper->escapeHtmlAttr($id) ?>"
+                        title="<?= $escaper->escapeHtmlAttr($panel['title']) ?>">
+                    <?= $escaper->escapeHtml($panel['label']) ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+        <div class="mdx-fdt__body" role="tabpanel" tabindex="-1" data-mdx-body>
+            <p class="mdx-fdt__empty"><?= $escaper->escapeHtml(__('Pick a tab.')) ?></p>
+        </div>
+    </div>
+</div>
+
+<script src="<?= $escaper->escapeUrl($jsUrl) ?>" defer></script>

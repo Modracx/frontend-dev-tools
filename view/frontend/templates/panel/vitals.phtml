@@ -1,0 +1,206 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$v = $block->rows('vitals_snapshot');
+$summary = $block->rows('summary');
+
+/** Google's own thresholds, so the colours mean what they mean everywhere else. */
+$rate = static function (?float $value, float $good, float $poor): array {
+    if ($value === null) {
+        return ['—', ''];
+    }
+
+    return match (true) {
+        $value <= $good => ['good', 'mdx-good'],
+        $value <= $poor => ['needs work', 'mdx-warn'],
+        default => ['poor', 'mdx-bad'],
+    };
+};
+
+$lcp = isset($v['lcp']) ? (float)$v['lcp'] : null;
+$cls = isset($v['cls']) ? (float)$v['cls'] : null;
+$inp = isset($v['inp']) ? (float)$v['inp'] : null;
+$ttfb = isset($v['ttfb']) ? (float)$v['ttfb'] : null;
+
+[$lcpLabel, $lcpClass] = $rate($lcp, 2500, 4000);
+[$clsLabel, $clsClass] = $rate($cls, 0.1, 0.25);
+[$inpLabel, $inpClass] = $rate($inp, 200, 500);
+[$ttfbLabel, $ttfbClass] = $rate($ttfb, 800, 1800);
+?>
+<?php if (!$v): ?>
+    <p class="mdx-fdt__empty">
+        <?= $escaper->escapeHtml(__(
+            'No measurements yet. This panel reads the browser\'s own performance timeline, so '
+            . 'it needs a page you actually loaded — reopen it after a normal page load.'
+        )) ?>
+    </p>
+<?php else: ?>
+
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label">LCP</span>
+        <span class="mdx-card__value <?= $escaper->escapeHtmlAttr($lcpClass) ?>">
+            <?= $lcp === null ? '—' : $escaper->escapeHtml($block->ms($lcp)) ?>
+        </span>
+        <span class="mdx-card__note"><?= $escaper->escapeHtml($lcpLabel) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label">CLS</span>
+        <span class="mdx-card__value <?= $escaper->escapeHtmlAttr($clsClass) ?>">
+            <?= $cls === null ? '—' : $escaper->escapeHtml(number_format($cls, 3)) ?>
+        </span>
+        <span class="mdx-card__note"><?= $escaper->escapeHtml($clsLabel) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label">INP</span>
+        <span class="mdx-card__value <?= $escaper->escapeHtmlAttr($inpClass) ?>">
+            <?= $inp === null ? '—' : $escaper->escapeHtml($block->ms($inp)) ?>
+        </span>
+        <span class="mdx-card__note"><?= $inp === null ? $escaper->escapeHtml(__('no interaction yet')) : $escaper->escapeHtml($inpLabel) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label">TTFB</span>
+        <span class="mdx-card__value <?= $escaper->escapeHtmlAttr($ttfbClass) ?>">
+            <?= $ttfb === null ? '—' : $escaper->escapeHtml($block->ms($ttfb)) ?>
+        </span>
+        <span class="mdx-card__note"><?= $escaper->escapeHtml($ttfbLabel) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Transferred')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml($block->bytes($v['total'] ?? 0)) ?></span>
+        <span class="mdx-card__note"><?= (int)($v['requests'] ?? 0) ?> <?= $escaper->escapeHtml(__('requests')) ?></span>
+    </div>
+</div>
+
+<?php
+$server = (float)($summary['duration_ms'] ?? 0);
+$networkish = $ttfb !== null ? max(0.0, $ttfb - $server) : null;
+?>
+<?php if ($ttfb !== null && $server > 0): ?>
+    <h3><?= $escaper->escapeHtml(__('Where the time to first byte went')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'This is the join no purely server-side profiler can make, and no purely browser-side '
+            . 'tool can either: the browser measured the wait, this module measured the PHP inside it.'
+        )) ?>
+    </p>
+    <table>
+        <tbody>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Browser waited (TTFB)')) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($ttfb)) ?> ms</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('PHP spent building it')) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($server)) ?> ms</td>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(number_format(($server / max($ttfb, 0.01)) * 100, 0)) ?>%</td>
+        </tr>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Everything else (DNS, TLS, network, queueing)')) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($networkish)) ?> ms</td>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(number_format(($networkish / max($ttfb, 0.01)) * 100, 0)) ?>%</td>
+        </tr>
+        </tbody>
+    </table>
+    <p>
+        <?= $escaper->escapeHtml(
+            $server / max($ttfb, 0.01) > 0.6
+                ? __('Most of the wait is PHP, so the SQL, Blocks and Modules tabs are where to look.')
+                : __('Most of the wait is not PHP — look at the connection, TLS, or whatever sits in front of Magento.')
+        ) ?>
+    </p>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('What is responsible')) ?></h3>
+<table>
+    <tbody>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Largest contentful paint element')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($v['lcpElement'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Largest layout shift')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($v['clsElement'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Slowest interaction')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($v['inpTarget'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('First contentful paint')) ?></td>
+        <td><?= isset($v['fcp']) ? $escaper->escapeHtml($block->ms($v['fcp'])) . ' ms' : '—' ?></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Render-blocking in head')) ?></td>
+        <td class="<?= (int)($v['blocking'] ?? 0) > 6 ? 'mdx-warn' : '' ?>"><?= (int)($v['blocking'] ?? 0) ?></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Images with no reserved size')) ?></td>
+        <td class="<?= (int)($v['undimensioned'] ?? 0) > 0 ? 'mdx-warn' : 'mdx-good' ?>">
+            <?= (int)($v['undimensioned'] ?? 0) ?>
+            <?php if ((int)($v['undimensioned'] ?? 0) > 0): ?>
+                <span class="mdx-dim"><?= $escaper->escapeHtml(__('— the usual cause of layout shift')) ?></span>
+            <?php endif; ?>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<h3><?= $escaper->escapeHtml(__('Payload by type')) ?></h3>
+<table>
+    <thead>
+    <tr>
+        <th><?= $escaper->escapeHtml(__('Type')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Requests')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Transferred')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Decoded')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php
+    $byType = $v['byType'] ?? [];
+    uasort($byType, static fn (array $a, array $b): int => ($b['transferred'] ?? 0) <=> ($a['transferred'] ?? 0));
+    ?>
+    <?php foreach ($byType as $type => $row): ?>
+        <tr>
+            <td><?= $escaper->escapeHtml((string)$type) ?></td>
+            <td class="mdx-num"><?= (int)$row['count'] ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->bytes($row['transferred'] ?? 0)) ?></td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->bytes($row['bytes'] ?? 0)) ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<?php if (!empty($v['uncompressed'])): ?>
+    <h3><?= $escaper->escapeHtml(__('Served without compression')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'Transferred at very nearly their decoded size, so gzip or brotli is not being applied '
+            . 'to them. Usually one line of web server configuration.'
+        )) ?>
+    </p>
+    <table>
+        <tbody>
+        <?php foreach ($v['uncompressed'] as $row): ?>
+            <tr>
+                <td><code><?= $escaper->escapeHtml((string)$row['url']) ?></code></td>
+                <td class="mdx-num mdx-warn"><?= (int)$row['kb'] ?> KB</td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<p class="mdx-dim">
+    <?= $escaper->escapeHtml(__(
+        'Measured in this browser on this machine, so treat them as directional rather than as '
+        . 'field data — and remember Xdebug and a cold cache both inflate TTFB. The Env tab says '
+        . 'whether either is in play.'
+    )) ?>
+</p>
+<?php endif; ?>

@@ -1,0 +1,68 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$runs = $block->rows('runs');
+$current = (string)$block->getData('token');
+?>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Every profiled request, not only the ones that produced a page. Section loads, '
+        . 'add-to-cart, GraphQL and any other background call has no page for a toolbar to sit '
+        . 'on — this is where they are read.'
+    )) ?>
+    <strong><?= $escaper->escapeHtml(__('Click a row to load that run into every other tab.')) ?></strong>
+</p>
+
+<?php if (!$block->getData('persisted')): ?>
+    <p class="mdx-warn">
+        <?= $escaper->escapeHtml(__(
+            'Profile storage is switched off, so there is no history to show. Turn it on under '
+            . 'Stores > Configuration > Advanced > Modracx Frontend Dev Tools > Storage.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter by URL or action…')) ?>"/>
+
+<table>
+    <thead>
+    <tr>
+        <th><?= $escaper->escapeHtml(__('When')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Request')) ?></th>
+        <th><?= $escaper->escapeHtml(__('FPC')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Time')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('SQL')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Issues')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($runs as $run): ?>
+        <tr class="mdx-clickable"
+            data-mdx-run="<?= $escaper->escapeHtmlAttr((string)$run['token']) ?>"
+            title="<?= $escaper->escapeHtmlAttr(__('Load this run into every tab')) ?>"
+            data-mdx-filterable="<?= $escaper->escapeHtmlAttr(($run['url'] ?? '') . ' ' . ($run['full_action'] ?? '')) ?>">
+            <td class="mdx-dim"><?= $escaper->escapeHtml((string)$run['created_at']) ?></td>
+            <td>
+                <?= $escaper->escapeHtml((string)$run['method']) ?>
+                <code><?= $escaper->escapeHtml((string)$run['full_action']) ?></code>
+                <?php if (!empty($run['is_ajax'])): ?>
+                    <span class="mdx-dim">· ajax</span>
+                <?php endif; ?>
+                <?php if ((string)$run['token'] === $current): ?>
+                    <span class="mdx-good">· <?= $escaper->escapeHtml(__('this page')) ?></span>
+                <?php endif; ?>
+                <span class="mdx-finding__origin"><?= $escaper->escapeHtml((string)$run['url']) ?></span>
+            </td>
+            <td class="<?= (string)$run['fpc_status'] === 'uncacheable' ? 'mdx-bad' : 'mdx-dim' ?>">
+                <?= $escaper->escapeHtml((string)$run['fpc_status']) ?>
+            </td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($run['duration_ms'])) ?></td>
+            <td class="mdx-num"><?= (int)$run['query_count'] ?></td>
+            <td class="mdx-num <?= (int)$run['issue_count'] > 0 ? 'mdx-warn' : '' ?>"><?= (int)$run['issue_count'] ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

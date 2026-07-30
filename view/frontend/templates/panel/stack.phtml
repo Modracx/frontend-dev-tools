@@ -1,0 +1,162 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$summary = $block->rows('summary');
+$cache = $block->rows('cache');
+$snapshot = $block->rows('stack_snapshot');
+$stack = $summary['stack'] ?? [];
+$id = (string)($stack['id'] ?? 'unknown');
+?>
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Stack')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml((string)($stack['label'] ?? '—')) ?></span>
+    </div>
+    <?php foreach (($snapshot['cards'] ?? []) as $card): ?>
+        <div class="mdx-card">
+            <span class="mdx-card__label"><?= $escaper->escapeHtml((string)$card['label']) ?></span>
+            <span class="mdx-card__value"><?= $escaper->escapeHtml((string)$card['value']) ?></span>
+            <?php if (!empty($card['note'])): ?>
+                <span class="mdx-card__note"><?= $escaper->escapeHtml((string)$card['note']) ?></span>
+            <?php endif; ?>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<p>
+    <?= $escaper->escapeHtml((string)($stack['detail'] ?? '')) ?>
+    <?= $escaper->escapeHtml(__(
+        'Detected per request. Hyvä is read from the theme inheritance chain; Breeze is asked '
+        . 'directly, because having the module installed does not mean it is running — it only '
+        . 'takes over themes that opt in, and stands down for excluded URLs and unsupported '
+        . 'pages. The runtime figures below are the independent check: if this says Breeze and '
+        . 'RequireJS has loaded hundreds of modules, believe the numbers.'
+    )) ?>
+</p>
+
+<?php if (!$snapshot): ?>
+    <p class="mdx-warn">
+        <?= $escaper->escapeHtml(__(
+            'No snapshot was taken. This panel reads the live page, so it needs the toolbar '
+            . 'script running — reopen the tab on a page you have actually loaded.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<?php if (!empty($snapshot['components'])): ?>
+    <h3>
+        <?= $escaper->escapeHtml(match ($id) {
+            'hyva' => __('Alpine components on this page'),
+            'breeze' => __('Breeze components on this page'),
+            default => __('Initialised components on this page'),
+        }) ?>
+        <span class="mdx-dim">(<?= (int)count($snapshot['components']) ?>)</span>
+    </h3>
+    <input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter components…')) ?>"/>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Element')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Component')) ?></th>
+            <th><?= $escaper->escapeHtml(__('State keys')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($snapshot['components'] as $component): ?>
+            <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr(
+                ($component['element'] ?? '') . ' ' . ($component['name'] ?? '')
+            ) ?>">
+                <td><code><?= $escaper->escapeHtml((string)($component['element'] ?? '')) ?></code></td>
+                <td><?= $escaper->escapeHtml((string)($component['name'] ?? '')) ?></td>
+                <td class="mdx-dim"><code><?= $escaper->escapeHtml((string)($component['keys'] ?? '')) ?></code></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php if (!empty($snapshot['sections'])): ?>
+    <h3><?= $escaper->escapeHtml(__('Customer section data')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(match ($id) {
+            'hyva' => __(
+                'Hyvä keeps the whole section-data blob together and only reloads it when the '
+                . 'private content version changes or the stored copy is over an hour old. A '
+                . 'stale cart total is almost always that TTL rather than a bug.'
+            ),
+            'breeze' => __(
+                'Breeze re-implements Luma\'s customer-data storage on its own JavaScript. '
+                . 'Sections invalidate individually, but the code doing it is not Magento\'s.'
+            ),
+            default => __('Luma invalidates each section on its own and tracks versions in section_data_ids.'),
+        }) ?>
+    </p>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Section')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Age')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Size')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($snapshot['sections'] as $section): ?>
+            <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr((string)($section['name'] ?? '')) ?>">
+                <td><code><?= $escaper->escapeHtml((string)($section['name'] ?? '')) ?></code></td>
+                <td class="mdx-num <?= (int)($section['age'] ?? 0) > 3600 ? 'mdx-warn' : '' ?>">
+                    <?= $escaper->escapeHtml((string)($section['age_label'] ?? '—')) ?>
+                </td>
+                <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->bytes($section['bytes'] ?? 0)) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php if (!empty($snapshot['navigations'])): ?>
+    <h3><?= $escaper->escapeHtml(__('Soft navigations since this page loaded')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'Breeze replaces part of the document instead of loading a new one, so these never '
+            . 'produced a page of their own. Their profiles are in the History tab.'
+        )) ?>
+    </p>
+    <table>
+        <tbody>
+        <?php foreach ($snapshot['navigations'] as $nav): ?>
+            <tr><td><code><?= $escaper->escapeHtml((string)$nav) ?></code></td></tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php if (!empty($snapshot['notes'])): ?>
+    <h3><?= $escaper->escapeHtml(__('Runtime')) ?></h3>
+    <table>
+        <tbody>
+        <?php foreach ($snapshot['notes'] as $label => $value): ?>
+            <tr>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)$label) ?></td>
+                <td><code><?= $escaper->escapeHtml((string)$value) ?></code></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Private content')) ?></h3>
+<table>
+    <tbody>
+    <tr>
+        <td class="mdx-dim">private_content_version</td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['private_content_version'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim">section_data_ids</td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['section_data_ids'] ?? '—')) ?></code></td>
+    </tr>
+    </tbody>
+</table>

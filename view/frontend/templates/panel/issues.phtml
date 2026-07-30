@@ -1,0 +1,74 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$issues = $block->rows('issues');
+$userland = $issues['userland'] ?? [];
+$core = $issues['core'] ?? [];
+
+$render = static function (array $issue) use ($escaper, $block): void {
+    ?>
+    <div class="mdx-finding mdx-finding--<?= $escaper->escapeHtmlAttr($issue['severity']) ?>"
+         data-mdx-filterable="<?= $escaper->escapeHtmlAttr($issue['title'] . ' ' . ($issue['subject'] ?? '') . ' ' . ($issue['origin'] ?? '')) ?>">
+        <div class="mdx-finding__head">
+            <span class="mdx-sev mdx-sev--<?= $escaper->escapeHtmlAttr($issue['severity']) ?>"><?= $escaper->escapeHtml($issue['severity']) ?></span>
+            <span class="mdx-finding__title"><?= $escaper->escapeHtml($issue['title']) ?></span>
+            <?php if (!empty($issue['saving_ms'])): ?>
+                <span class="mdx-finding__saving">≈ <?= $escaper->escapeHtml($block->ms($issue['saving_ms'])) ?> ms</span>
+            <?php endif; ?>
+        </div>
+
+        <?php if (!empty($issue['subject'])): ?>
+            <code><?= $escaper->escapeHtml($issue['subject']) ?></code>
+        <?php endif; ?>
+
+        <?php if (!empty($issue['origin'])): ?>
+            <span class="mdx-finding__origin"><?= $escaper->escapeHtml($issue['origin']) ?></span>
+        <?php endif; ?>
+
+        <?php if (!empty($issue['trail'])): ?>
+            <details>
+                <summary><?= $escaper->escapeHtml(__('Call trail')) ?></summary>
+                <pre><?php foreach ($issue['trail'] as $frame): ?><?= $escaper->escapeHtml($frame) . "\n" ?><?php endforeach; ?></pre>
+            </details>
+        <?php endif; ?>
+
+        <?php if (!empty($issue['detail']) && $issue['detail'] !== ($issue['subject'] ?? '')): ?>
+            <details>
+                <summary><?= $escaper->escapeHtml(__('Detail')) ?></summary>
+                <pre><?= $escaper->escapeHtml($issue['detail']) ?></pre>
+            </details>
+        <?php endif; ?>
+
+        <p class="mdx-finding__fix"><?= $escaper->escapeHtml($issue['recommendation']) ?></p>
+    </div>
+    <?php
+};
+?>
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter findings…')) ?>"/>
+
+<h3><?= $escaper->escapeHtml(__('Your code')) ?></h3>
+<?php if (!$userland): ?>
+    <p><?= $escaper->escapeHtml(__('Nothing in project code crossed a threshold on this request.')) ?></p>
+<?php else: ?>
+    <?php foreach ($userland as $issue) {
+        $render($issue);
+    } ?>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Magento and third parties')) ?></h3>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Findings with no call site you can edit. Informational — worth knowing when a page '
+        . 'is slow for reasons that are not yours, and worth reporting upstream, but not a task.'
+    )) ?>
+</p>
+<?php if (!$core): ?>
+    <p><?= $escaper->escapeHtml(__('None.')) ?></p>
+<?php else: ?>
+    <?php foreach (array_slice($core, 0, 40) as $issue) {
+        $render($issue);
+    } ?>
+<?php endif; ?>

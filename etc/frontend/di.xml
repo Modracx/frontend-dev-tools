@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+
+    <!--
+        Everything here wraps an object that is built during dispatch, after area
+        configuration has loaded — so these can be scoped to the storefront and cost the
+        admin and the web API precisely nothing, not even a disabled check.
+    -->
+
+    <type name="Magento\Framework\View\Element\AbstractBlock">
+        <plugin name="modracx_fdt_block_render"
+                type="Modracx\FrontendDevTools\Plugin\View\BlockRender"
+                sortOrder="1"/>
+    </type>
+
+    <type name="Magento\Framework\View\Layout">
+        <plugin name="modracx_fdt_layout"
+                type="Modracx\FrontendDevTools\Plugin\View\LayoutGenerate"
+                sortOrder="1"/>
+    </type>
+
+    <type name="Magento\Framework\View\LayoutFactory">
+        <plugin name="modracx_fdt_layout_construction"
+                type="Modracx\FrontendDevTools\Plugin\View\LayoutConstruction"
+                sortOrder="1"/>
+    </type>
+
+    <type name="Magento\Framework\View\Design\FileResolution\Fallback\ResolverInterface">
+        <plugin name="modracx_fdt_fallback"
+                type="Modracx\FrontendDevTools\Plugin\View\FallbackResolver"
+                sortOrder="10"/>
+    </type>
+
+    <type name="Magento\Framework\Event\Invoker\InvokerDefault">
+        <plugin name="modracx_fdt_observers"
+                type="Modracx\FrontendDevTools\Plugin\Event\ObserverInvoker"
+                sortOrder="1"/>
+    </type>
+
+    <type name="Magento\Framework\Event\ManagerInterface">
+        <plugin name="modracx_fdt_events"
+                type="Modracx\FrontendDevTools\Plugin\Event\EventDispatch"
+                sortOrder="1"/>
+    </type>
+
+    <type name="Magento\Framework\View\TemplateEngineFactory">
+        <plugin name="modracx_fdt_template_hints"
+                type="Modracx\FrontendDevTools\Plugin\View\TemplateHints"
+                sortOrder="100"/>
+    </type>
+</config>

@@ -1,0 +1,21 @@
+{
+    "name": "modracx/mage-frontend-dev-tools",
+    "description": "Storefront developer toolbar and profiler for Magento 2 — works on Luma, Hyva and Breeze",
+    "type": "magento2-module",
+    "license": "proprietary",
+    "require": {
+        "php": "~8.1.0||~8.2.0||~8.3.0||~8.4.0",
+        "magento/framework": "*"
+    },
+    "suggest": {
+        "modracx/mage-admin-dev-tools": "The matching admin-side developer toolbar"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Modracx\\FrontendDevTools\\": ""
+        }
+    }
+}

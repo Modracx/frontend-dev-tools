@@ -1,0 +1,104 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$layout = $block->rows('layout');
+$handles = $layout['handles'] ?? [];
+$uncacheable = $layout['uncacheable'] ?? [];
+?>
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Merge XML')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml($block->ms($layout['xml_ms'] ?? 0)) ?></span>
+        <span class="mdx-card__note">ms</span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Build elements')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml($block->ms($layout['elements_ms'] ?? 0)) ?></span>
+        <span class="mdx-card__note">ms</span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Handles')) ?></span>
+        <span class="mdx-card__value"><?= (int)count($handles) ?></span>
+    </div>
+</div>
+
+<?php if (empty($layout['generated'])): ?>
+    <p class="mdx-warn">
+        <?= $escaper->escapeHtml(__(
+            'Layout never ran on this request, which means the page was served from the full '
+            . 'page cache. The handles below are from whichever request built it.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<?php $cacheable = $layout['cacheable'] ?? null; ?>
+<h3><?= $escaper->escapeHtml(__('Cacheable')) ?></h3>
+<p class="<?= $cacheable === false ? 'mdx-bad' : ($cacheable === true ? 'mdx-good' : '') ?>">
+    <?= $escaper->escapeHtml(match ($cacheable) {
+        true => __('Magento reports this page as cacheable.'),
+        false => __('Magento reports this page as not cacheable — one generated element opted out.'),
+        default => __('Layout was not asked, so cacheability is unknown for this request.'),
+    }) ?>
+</p>
+
+<h3><?= $escaper->escapeHtml(__('cacheable="false" declarations')) ?></h3>
+<?php if (!$uncacheable): ?>
+    <p class="mdx-good">
+        <?= $escaper->escapeHtml(__('None in the merged layout for these handles.')) ?>
+    </p>
+<?php else: ?>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'One such node, once it produces a generated element, makes the whole page '
+            . 'uncacheable — not just itself. These were found in the merged layout for the '
+            . 'handles below; check the line above for whether any of them actually took effect.'
+        )) ?>
+    </p>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Node')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Name')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Class or template')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($uncacheable as $row): ?>
+            <tr>
+                <td class="mdx-dim">
+                    <?= $escaper->escapeHtml((string)$row['element']) ?>
+                    <?= $escaper->escapeHtml(empty($row['in_play']) ? __('· not generated') : '') ?>
+                </td>
+                <td class="<?= empty($row['in_play']) ? 'mdx-dim' : 'mdx-bad' ?>">
+                    <?= $escaper->escapeHtml((string)$row['name']) ?>
+                </td>
+                <td class="mdx-dim">
+                    <?= $escaper->escapeHtml(trim((string)($row['class'] ?? '') . ' ' . (string)($row['template'] ?? ''))) ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Active handles')) ?></h3>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'In the order they were applied — which is the order their XML merges in, so a later '
+        . 'handle wins where two touch the same node.'
+    )) ?>
+</p>
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter handles…')) ?>"/>
+<table>
+    <tbody>
+    <?php foreach ($handles as $index => $handle): ?>
+        <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr((string)$handle) ?>">
+            <td class="mdx-num mdx-dim"><?= (int)$index + 1 ?></td>
+            <td><code><?= $escaper->escapeHtml((string)$handle) ?></code></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

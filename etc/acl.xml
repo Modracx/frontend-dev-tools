@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
+    <acl>
+        <resources>
+            <!--
+                The ancestor chain is repeated exactly as Magento_Config declares it, down to
+                the stores_settings level, so this merges into the existing node. Nesting it
+                one level short creates a second Magento_Config::config at a different depth,
+                which the ACL schema rejects as a duplicate id and takes the whole admin down
+                with it.
+            -->
+            <resource id="Magento_Backend::admin">
+                <resource id="Magento_Backend::system">
+                    <resource id="Magento_Backend::system_other_settings">
+                        <resource id="Modracx_FrontendDevTools::runs"
+                                  title="Storefront Profiler Runs"
+                                  translate="title"
+                                  sortOrder="90"/>
+                    </resource>
+                </resource>
+                <resource id="Magento_Backend::stores">
+                    <resource id="Magento_Backend::stores_settings">
+                        <resource id="Magento_Config::config">
+                            <resource id="Modracx_FrontendDevTools::config"
+                                      title="Modracx Frontend Dev Tools Section"
+                                      translate="title"
+                                      sortOrder="920"/>
+                        </resource>
+                    </resource>
+                </resource>
+            </resource>
+        </resources>
+    </acl>
+</config>

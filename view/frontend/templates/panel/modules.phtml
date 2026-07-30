@@ -1,0 +1,54 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$modules = $block->rows('modules');
+$summary = $block->rows('summary');
+$total = (float)($summary['duration_ms'] ?? 0);
+?>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Block time, observer time and query time attributed to the module the code belongs '
+        . 'to. This is the view that answers "which of the extensions we added last month is '
+        . 'costing us the category page".'
+    )) ?>
+</p>
+<p class="mdx-dim">
+    <?= $escaper->escapeHtml(__(
+        'Attribution is by file path and class namespace, so work a module triggers inside core '
+        . 'is counted against core. Read it as a floor, not a bill.'
+    )) ?>
+</p>
+
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter modules…')) ?>"/>
+
+<table>
+    <thead>
+    <tr>
+        <th><?= $escaper->escapeHtml(__('Module')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Blocks')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Observers')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('SQL')) ?></th>
+        <th class="mdx-num">×</th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Total')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Share')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($modules as $name => $stats): ?>
+        <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr((string)$name) ?>">
+            <td><?= $escaper->escapeHtml((string)$name) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['block_ms'])) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['observer_ms'])) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['query_ms'])) ?></td>
+            <td class="mdx-num mdx-dim"><?= (int)$stats['query_count'] ?></td>
+            <td class="mdx-num"><strong><?= $escaper->escapeHtml($block->ms($stats['total_ms'])) ?></strong></td>
+            <td class="mdx-num mdx-dim">
+                <?= $total > 0 ? $escaper->escapeHtml(number_format(((float)$stats['total_ms'] / $total) * 100, 1)) : '—' ?>%
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

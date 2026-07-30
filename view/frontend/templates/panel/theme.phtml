@@ -1,0 +1,131 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$theme = $block->rows('theme');
+$chain = $block->rows('live_chain') ?: ($theme['chain'] ?? []);
+$byType = $theme['by_type'] ?? [];
+$missing = $theme['missing'] ?? [];
+$templates = $byType['template'] ?? [];
+
+/** Where an override of this file could live, nearest theme first. */
+$candidates = static function (?string $module, string $file) use ($chain): array {
+    $paths = [];
+
+    foreach ($chain as $themeRow) {
+        $path = (string)($themeRow['path'] ?? '');
+
+        if ($path === '') {
+            continue;
+        }
+
+        $paths[] = 'app/design/frontend/' . $path . '/'
+            . ($module !== null && $module !== '' ? $module . '/' : '')
+            . 'templates/' . $file;
+    }
+
+    return $paths;
+};
+?>
+<h3><?= $escaper->escapeHtml(__('Inheritance chain')) ?></h3>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'The order the fallback walks. The first theme that has a copy of a file wins; every '
+        . 'copy below it is shadowed.'
+    )) ?>
+</p>
+<table>
+    <tbody>
+    <?php foreach ($chain as $index => $themeRow): ?>
+        <tr>
+            <td class="mdx-num mdx-dim"><?= (int)$index + 1 ?></td>
+            <td>
+                <code><?= $escaper->escapeHtml((string)($themeRow['path'] ?? '')) ?></code>
+                <?php if ($index === 0): ?>
+                    <span class="mdx-good">· <?= $escaper->escapeHtml(__('active')) ?></span>
+                <?php endif; ?>
+            </td>
+            <td class="mdx-dim"><?= $escaper->escapeHtml((string)($themeRow['title'] ?? '')) ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<?php if ($missing): ?>
+    <h3><?= $escaper->escapeHtml(__('Requested but not found')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'The fallback was asked for these and came back empty. On a storefront this is '
+            . 'usually a static deploy that did not finish, or an override pointing at a file '
+            . 'that has since moved.'
+        )) ?>
+    </p>
+    <table>
+        <tbody>
+        <?php foreach (array_slice($missing, 0, 60) as $row): ?>
+            <tr>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)$row['type']) ?></td>
+                <td class="mdx-bad"><code><?= $escaper->escapeHtml((string)($row['module'] ? $row['module'] . '::' : '') . $row['file']) ?></code></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Templates, and which theme served them')) ?></h3>
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter by file, module or theme…')) ?>"/>
+<?php if (!$templates): ?>
+    <p><?= $escaper->escapeHtml(__('Nothing was resolved on this request — either it came from the cache, or the fallback collector is off.')) ?></p>
+<?php else: ?>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Requested')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Served from')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($templates as $row): ?>
+            <?php $module = $row['module'] ?? null; ?>
+            <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr(($module ?? '') . ' ' . ($row['file'] ?? '') . ' ' . ($row['resolved'] ?? '')) ?>">
+                <td>
+                    <code><?= $escaper->escapeHtml(($module ? $module . '::' : '') . (string)$row['file']) ?></code>
+                </td>
+                <td>
+                    <?php if (empty($row['found'])): ?>
+                        <span class="mdx-bad"><?= $escaper->escapeHtml(__('not found')) ?></span>
+                    <?php else: ?>
+                        <span class="<?= ($row['resolved_theme'] ?? '') === 'module' ? 'mdx-dim' : 'mdx-good' ?>">
+                            <?= $escaper->escapeHtml((string)$row['resolved_theme']) ?>
+                        </span>
+                        <span class="mdx-finding__origin"><?= $escaper->escapeHtml((string)$row['resolved']) ?></span>
+                    <?php endif; ?>
+                    <details>
+                        <summary><?= $escaper->escapeHtml(__('Where an override would go')) ?></summary>
+                        <pre><?php foreach ($candidates($module, (string)$row['file']) as $candidate): ?><?= $escaper->escapeHtml($candidate) . "\n" ?><?php endforeach; ?></pre>
+                    </details>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php foreach ($byType as $type => $rows): ?>
+    <?php if ($type === 'template') {
+        continue;
+    } ?>
+    <h3><?= $escaper->escapeHtml($type) ?> <span class="mdx-dim">(<?= (int)count($rows) ?>)</span></h3>
+    <table>
+        <tbody>
+        <?php foreach (array_slice($rows, 0, 80) as $row): ?>
+            <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr(($row['file'] ?? '') . ' ' . ($row['resolved'] ?? '')) ?>">
+                <td><code><?= $escaper->escapeHtml((string)($row['module'] ? $row['module'] . '::' : '') . $row['file']) ?></code></td>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)($row['resolved'] ?? '—')) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endforeach; ?>

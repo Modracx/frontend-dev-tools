@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <job name="modracx_fdt_prune_profiles"
+             instance="Modracx\FrontendDevTools\Cron\PruneProfiles"
+             method="execute">
+            <schedule>17 * * * *</schedule>
+        </job>
+    </group>
+</config>
