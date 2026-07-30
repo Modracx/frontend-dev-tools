@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="modracx_fdt_profile" resource="default" engine="innodb" comment="Storefront profiler runs">
+        <column xsi:type="int" name="profile_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="varchar" name="token" nullable="false" length="32" comment="Public run id"/>
+        <column xsi:type="timestamp" name="created_at" on_update="false" nullable="false" default="CURRENT_TIMESTAMP"/>
+        <!-- text rather than varchar: layered-navigation URLs run well past the 1024 characters a varchar column may declare -->
+        <column xsi:type="text" name="url" nullable="true"/>
+        <column xsi:type="varchar" name="method" nullable="false" length="10" default="GET"/>
+        <column xsi:type="varchar" name="full_action" nullable="true" length="255" comment="route_controller_action"/>
+        <column xsi:type="smallint" name="status_code" unsigned="true" nullable="true"/>
+        <column xsi:type="varchar" name="theme" nullable="true" length="255"/>
+        <column xsi:type="smallint" name="store_id" unsigned="true" nullable="true"/>
+        <column xsi:type="smallint" name="is_ajax" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="varchar" name="fpc_status" nullable="true" length="20" comment="hit|miss|uncacheable|off"/>
+        <column xsi:type="decimal" name="duration_ms" scale="3" precision="12" nullable="true"/>
+        <column xsi:type="int" name="memory_peak_kb" unsigned="true" nullable="true"/>
+        <column xsi:type="int" name="query_count" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="decimal" name="query_time_ms" scale="3" precision="12" nullable="false" default="0"/>
+        <column xsi:type="int" name="block_count" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="int" name="event_count" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="int" name="issue_count" unsigned="true" nullable="false" default="0"/>
+        <column xsi:type="varchar" name="max_severity" nullable="true" length="10"/>
+        <column xsi:type="varchar" name="client_ip" nullable="true" length="45"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="profile_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="MODRACX_FDT_PROFILE_TOKEN">
+            <column name="token"/>
+        </constraint>
+        <index referenceId="MODRACX_FDT_PROFILE_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+        <index referenceId="MODRACX_FDT_PROFILE_FULL_ACTION" indexType="btree">
+            <column name="full_action"/>
+        </index>
+    </table>
+
+    <table name="modracx_fdt_profile_data" resource="default" engine="innodb" comment="Per-collector payloads">
+        <column xsi:type="int" name="data_id" unsigned="true" nullable="false" identity="true"/>
+        <column xsi:type="varchar" name="token" nullable="false" length="32"/>
+        <column xsi:type="varchar" name="collector" nullable="false" length="32"/>
+        <column xsi:type="mediumtext" name="payload" nullable="true" comment="JSON"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="data_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="MODRACX_FDT_DATA_TOKEN_COLLECTOR">
+            <column name="token"/>
+            <column name="collector"/>
+        </constraint>
+    </table>
+</schema>

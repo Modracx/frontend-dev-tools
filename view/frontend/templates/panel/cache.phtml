@@ -1,0 +1,195 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$cache = $block->rows('cache');
+$blocks = $block->rows('blocks');
+$status = (string)($cache['status'] ?? 'unknown');
+$layoutOptOuts = $cache['uncacheable_layout'] ?? [];
+$blockOptOuts = $blocks['uncacheable_blocks'] ?? [];
+$cacheable = $cache['cacheable'] ?? null;
+
+$explanation = match ($status) {
+    'hit' => __('Served from the full page cache — layout never ran, so most of the other tabs describe the request that built this page rather than this one.'),
+    'miss' => __('Built from scratch and eligible for caching. The next visitor on this URL should get a hit.'),
+    'uncacheable' => __('Built from scratch and will not be cached, because something on the page opted out. That is what the list below is for.'),
+    default => __('Cache status could not be determined for this request.'),
+};
+?>
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Status')) ?></span>
+        <span class="mdx-card__value <?= $status === 'hit' ? 'mdx-good' : ($status === 'uncacheable' ? 'mdx-bad' : 'mdx-warn') ?>">
+            <?= $escaper->escapeHtml(strtoupper($status)) ?>
+        </span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Backend')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml((string)($cache['application'] ?? '—')) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('TTL')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml((string)($cache['ttl'] ?? '—')) ?></span>
+        <span class="mdx-card__note">s</span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Opt-outs')) ?></span>
+        <span class="mdx-card__value <?= $layoutOptOuts || $blockOptOuts ? 'mdx-bad' : 'mdx-good' ?>">
+            <?= (int)(count($layoutOptOuts) + count($blockOptOuts)) ?>
+        </span>
+    </div>
+</div>
+
+<p><?= $escaper->escapeHtml($explanation) ?></p>
+
+<?php if ((string)($cache['application'] ?? '') === 'varnish' && $status !== 'hit'): ?>
+    <p class="mdx-warn">
+        <?= $escaper->escapeHtml(__(
+            'Varnish is the configured backend. A hit there never reaches PHP at all, so this '
+            . 'toolbar cannot appear on one — every page you see it on is by definition a page '
+            . 'Varnish did not serve.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<?php
+$inPlay = array_values(array_filter($layoutOptOuts, static fn (array $r): bool => !empty($r['in_play'])));
+$declaredOnly = array_values(array_filter($layoutOptOuts, static fn (array $r): bool => empty($r['in_play'])));
+?>
+<h3><?= $escaper->escapeHtml(__('Cache opt-outs')) ?></h3>
+
+<?php $constructed = $cache['constructed_uncacheable'] ?? []; ?>
+<?php if ($cacheable === false && !$inPlay && !$blockOptOuts): ?>
+    <p class="mdx-bad">
+        <?= $escaper->escapeHtml(__(
+            'Magento reports this page as uncacheable, and no block is responsible — no '
+            . 'generated element on the page declares cacheable="false". That leaves the layout '
+            . 'object itself, which was constructed non-cacheable before any block was considered.'
+        )) ?>
+    </p>
+    <?php if ($constructed): ?>
+        <p><?= $escaper->escapeHtml(__('These built one:')) ?></p>
+        <table>
+            <tbody>
+            <?php foreach ($constructed as $row): ?>
+                <tr>
+                    <td class="<?= !empty($row['is_userland']) ? 'mdx-bad' : 'mdx-dim' ?>">
+                        <?= $escaper->escapeHtml((string)($row['module'] ?? __('unknown module'))) ?>
+                    </td>
+                    <td>
+                        <span class="mdx-finding__origin"><?= $escaper->escapeHtml((string)($row['origin'] ?? '—')) ?></span>
+                        <?php if (!empty($row['trail'])): ?>
+                            <details>
+                                <summary><?= $escaper->escapeHtml(__('Call trail')) ?></summary>
+                                <pre><?php foreach ($row['trail'] as $frame): ?><?= $escaper->escapeHtml($frame) . "\n" ?><?php endforeach; ?></pre>
+                            </details>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <p>
+            <?= $escaper->escapeHtml(__(
+                'Nothing constructed a layout with caching switched off during this request '
+                . 'either, so the decision was made before the profiler could see it — look at '
+                . 'the controller or result object for this action, and at any module wrapping it.'
+            )) ?>
+        </p>
+    <?php endif; ?>
+<?php elseif ($inPlay): ?>
+    <p class="mdx-bad">
+        <?= $escaper->escapeHtml(__(
+            'These are in the page structure, which is what makes the whole page uncacheable.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<?php if (!$layoutOptOuts && !$blockOptOuts): ?>
+    <p class="mdx-good"><?= $escaper->escapeHtml(__('No block on this page opts out of caching.')) ?></p>
+<?php else: ?>
+    <?php if ($declaredOnly && !$inPlay): ?>
+        <p>
+            <?= $escaper->escapeHtml(__(
+                'Declared in the merged layout but never generated, so none of these took '
+                . 'effect on this request. Listed because they are the first place to look when '
+                . 'the same URL turns uncacheable under different conditions.'
+            )) ?>
+        </p>
+    <?php endif; ?>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Found in')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Name')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Class or template')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($layoutOptOuts as $row): ?>
+            <tr>
+                <td class="mdx-dim">
+                    <?= $escaper->escapeHtml(
+                        empty($row['in_play']) ? __('layout XML (not generated)') : __('layout XML')
+                    ) ?>
+                </td>
+                <td class="<?= empty($row['in_play']) ? 'mdx-dim' : 'mdx-bad' ?>">
+                    <?= $escaper->escapeHtml((string)$row['name']) ?>
+                </td>
+                <td class="mdx-dim"><?= $escaper->escapeHtml(trim((string)($row['class'] ?? '') . ' ' . (string)($row['template'] ?? ''))) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        <?php foreach ($blockOptOuts as $row): ?>
+            <tr>
+                <td class="mdx-dim"><?= $escaper->escapeHtml(__('rendered block')) ?></td>
+                <td class="mdx-bad"><?= $escaper->escapeHtml((string)$row['name']) ?></td>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)($row['template'] ?? $row['class'] ?? '')) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'If the content is the same for everyone, drop the opt-out. If it is personal, the '
+            . 'fix is to render it empty and fill it from section data on the client, which is '
+            . 'what keeps the rest of the page cacheable.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Invalidation and private content')) ?></h3>
+<table>
+    <tbody>
+    <tr>
+        <td><?= $escaper->escapeHtml(__('X-Magento-Tags')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['tags'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td><?= $escaper->escapeHtml(__('Cache-Control')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['cache_control'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td><?= $escaper->escapeHtml(__('Pragma')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['pragma'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td><?= $escaper->escapeHtml(__('private_content_version')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['private_content_version'] ?? '—')) ?></code></td>
+    </tr>
+    <tr>
+        <td><?= $escaper->escapeHtml(__('section_data_ids')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($cache['section_data_ids'] ?? '—')) ?></code></td>
+    </tr>
+    </tbody>
+</table>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Luma invalidates customer sections one at a time and keeps their versions in '
+        . 'section_data_ids. Hyva does not — it reloads the whole section-data blob when the '
+        . 'private content version changes or the copy in storage is more than an hour old. If '
+        . 'a cart total is stale on Hyva, that TTL is usually why.'
+    )) ?>
+</p>

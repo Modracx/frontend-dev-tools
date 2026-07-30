@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Modracx_FrontendDevTools::runs"
+             title="Storefront Profiler Runs"
+             translate="title"
+             module="Modracx_FrontendDevTools"
+             sortOrder="90"
+             parent="Magento_Backend::system_other_settings"
+             action="modracx_fdt/runs/index"
+             resource="Modracx_FrontendDevTools::runs"/>
+    </menu>
+</config>

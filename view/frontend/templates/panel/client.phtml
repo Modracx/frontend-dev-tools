@@ -1,0 +1,62 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$events = $block->rows('client');
+
+$labels = [
+    'js' => __('JavaScript error'),
+    'promise' => __('Unhandled rejection'),
+    'asset' => __('Asset failed to load'),
+    'csp' => __('Content security policy'),
+    'request' => __('Failed request'),
+];
+?>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'What the server cannot see. Collected in the page since it loaded and sent along with '
+        . 'this panel request, so nothing here costs a round trip while you are browsing.'
+    )) ?>
+</p>
+
+<?php if (!$events): ?>
+    <p class="mdx-good"><?= $escaper->escapeHtml(__('Nothing has gone wrong in the browser since this page loaded.')) ?></p>
+<?php else: ?>
+    <table>
+        <thead>
+        <tr>
+            <th class="mdx-num">×</th>
+            <th><?= $escaper->escapeHtml(__('Type')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Message')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Source')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($events as $event): ?>
+            <?php $type = (string)$event['type']; ?>
+            <tr>
+                <td class="mdx-num <?= (int)($event['count'] ?? 1) > 5 ? 'mdx-warn' : 'mdx-dim' ?>">
+                    <?= (int)($event['count'] ?? 1) ?>
+                </td>
+                <td class="<?= in_array($type, ['js', 'promise'], true) ? 'mdx-bad' : 'mdx-warn' ?>">
+                    <?= $escaper->escapeHtml((string)($labels[$type] ?? $type)) ?>
+                </td>
+                <td><code><?= $escaper->escapeHtml((string)$event['message']) ?></code></td>
+                <td class="mdx-dim"><code><?= $escaper->escapeHtml((string)$event['detail']) ?></code></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('What is watched')) ?></h3>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Uncaught errors and unhandled promise rejections; script, stylesheet and image loads '
+        . 'that failed — the usual sign of an unfinished static deploy; content security policy '
+        . 'violations, which since 2.4.7 are the quiet reason an inline handler stops working; '
+        . 'and any fetch or XHR that came back 4xx, 5xx or not at all.'
+    )) ?>
+</p>

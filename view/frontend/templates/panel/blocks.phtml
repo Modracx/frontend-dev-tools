@@ -1,0 +1,97 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$blocks = $block->rows('blocks');
+$tree = $blocks['tree'] ?? [];
+$slowest = $blocks['slowest'] ?? [];
+$uncacheable = $blocks['uncacheable_blocks'] ?? [];
+$threshold = (float)($blocks['threshold'] ?? 50);
+?>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Times are exclusive: a parent does not carry its children\'s cost, so the block '
+        . 'shown as slow is the one actually doing the work.'
+    )) ?>
+</p>
+
+<?php if ($uncacheable): ?>
+    <h3><?= $escaper->escapeHtml(__('Blocks that opt out of caching')) ?></h3>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Name')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Template')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($uncacheable as $row): ?>
+            <tr>
+                <td class="mdx-bad"><?= $escaper->escapeHtml((string)$row['name']) ?></td>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)($row['template'] ?? $row['class'] ?? '')) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Slowest')) ?></h3>
+<table>
+    <thead>
+    <tr>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Own')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Total')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Output')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Block')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach (array_slice($slowest, 0, 30) as $row): ?>
+        <tr>
+            <td class="mdx-num <?= $escaper->escapeHtmlAttr($block->heat($row['exclusive_ms'], $threshold)) ?>">
+                <?= $escaper->escapeHtml($block->ms($row['exclusive_ms'])) ?>
+            </td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->ms($row['ms'])) ?></td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->bytes($row['bytes'] ?? 0)) ?></td>
+            <td>
+                <span class="mdx-tree-name"><?= $escaper->escapeHtml((string)$row['name']) ?></span>
+                <span class="mdx-dim"><?= $escaper->escapeHtml((string)($row['template'] ?? $row['class'] ?? '')) ?></span>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<h3><?= $escaper->escapeHtml(__('Render tree')) ?> <span class="mdx-dim">(<?= (int)($blocks['total'] ?? 0) ?>)</span></h3>
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter by block name or template…')) ?>"/>
+<table>
+    <thead>
+    <tr>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Own')) ?></th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Bytes')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Block')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Template')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($tree as $row): ?>
+        <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr(($row['name'] ?? '') . ' ' . ($row['template'] ?? '') . ' ' . ($row['class'] ?? '')) ?>">
+            <td class="mdx-num <?= $escaper->escapeHtmlAttr($block->heat($row['exclusive_ms'], $threshold)) ?>">
+                <?= $escaper->escapeHtml($block->ms($row['exclusive_ms'])) ?>
+            </td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->bytes($row['bytes'] ?? 0)) ?></td>
+            <td>
+                <span class="mdx-tree-name"><?= /* @noEscape */ str_repeat('&nbsp;&nbsp;', min(12, (int)($row['depth'] ?? 0))) ?><?= $escaper->escapeHtml((string)$row['name']) ?></span>
+                <?php if (($row['cacheable'] ?? true) === false): ?>
+                    <span class="mdx-bad">· <?= $escaper->escapeHtml(__('uncacheable')) ?></span>
+                <?php elseif (($row['cache_lifetime'] ?? null) !== null): ?>
+                    <span class="mdx-good">· <?= $escaper->escapeHtml(__('cached %1s', (int)$row['cache_lifetime'])) ?></span>
+                <?php endif; ?>
+            </td>
+            <td class="mdx-dim"><?= $escaper->escapeHtml((string)($row['template'] ?? $row['class'] ?? '')) ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

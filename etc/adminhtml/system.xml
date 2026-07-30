@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="modracx_fdt" translate="label" type="text" sortOrder="920" showInDefault="1" showInWebsite="1" showInStore="1">
+            <class>separator-top</class>
+            <label>Modracx Frontend Dev Tools</label>
+            <tab>advanced</tab>
+            <resource>Modracx_FrontendDevTools::config</resource>
+
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General</label>
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Toolbar</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Master switch. When off, no plugin collects anything and nothing is injected into the storefront.</comment>
+                </field>
+                <field id="allow_production" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allow in Production Mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Off by default. In production mode the toolbar stays dark even for allowed IPs unless this is set to Yes.]]></comment>
+                </field>
+                <field id="allowed_ips" translate="label comment" type="textarea" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Allowed IP Addresses</label>
+                    <comment><![CDATA[Comma or newline separated. Supports exact addresses and CIDR ranges (e.g. <code>10.0.0.0/8</code>). Empty means no IP is allowed — the access cookie then becomes the only way in.]]></comment>
+                </field>
+                <field id="require_cookie" translate="label comment" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Also Require Access Cookie</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[When Yes, an allowed IP is not enough — the browser must also hold the signed opt-in cookie. Get the URL from <code>bin/magento modracx:frontend:token</code>.]]></comment>
+                </field>
+            </group>
+
+            <group id="collectors" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Collectors</label>
+                <comment>Turn off what you do not need. Each disabled collector removes its runtime cost entirely.</comment>
+                <field id="db" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Database Queries</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="blocks" translate="label" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Block Rendering</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="events" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Events</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="observers" translate="label" type="select" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Observers</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="layout" translate="label" type="select" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Layout</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="fallback" translate="label comment" type="select" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Theme File Fallback</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Records which theme each template and asset was resolved from.</comment>
+                </field>
+                <field id="cache" translate="label" type="select" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Cache</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="client" translate="label comment" type="select" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Client-side Errors</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>JS errors, failed requests, CSP violations and missing assets, reported back by the browser.</comment>
+                </field>
+                <field id="translations" translate="label comment" type="select" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Translations</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Off by default — a page renders thousands of phrases and recording them all is the single heaviest collector.</comment>
+                </field>
+            </group>
+
+            <group id="thresholds" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Thresholds</label>
+                <comment>What counts as a problem. Anything at eight times the threshold is reported as critical.</comment>
+                <field id="slow_query" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Slow Query (ms)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="slow_block" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Slow Block Render (ms)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="slow_observer" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Slow Observer (ms)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="duplicate_limit" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Duplicate Query Limit</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <comment>How many identical statements before it is reported.</comment>
+                </field>
+                <field id="nplus1_limit" translate="label comment" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>N+1 Repeat Limit</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <comment>How many repeats of the same statement with a different bound id before it is called an N+1.</comment>
+                </field>
+                <field id="heavy_module" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Heavy Module (ms)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+            </group>
+
+            <group id="storage" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Storage</label>
+                <field id="persist" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Store Profiles</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Needed for the History tab and for profiling AJAX requests, which have no page to draw a toolbar on.</comment>
+                </field>
+                <field id="retention_hours" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Retention (hours)</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
+                <field id="max_events" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Max Recorded Entries Per Collector</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                    <comment>A hard stop so one pathological page cannot exhaust memory.</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

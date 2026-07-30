@@ -1,0 +1,208 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$summary = $block->rows('summary');
+$issues = $block->rows('issues');
+$userland = $issues['userland'] ?? [];
+$modules = array_slice($block->rows('modules'), 0, 5, true);
+$cache = $block->rows('cache');
+
+$cards = [
+    ['Total', $block->ms($summary['duration_ms'] ?? 0) . ' ms', 'wall clock'],
+    ['SQL', (string)($summary['query_count'] ?? 0), $block->ms($summary['query_time_ms'] ?? 0) . ' ms'],
+    ['Blocks', (string)($summary['block_count'] ?? 0), 'rendered'],
+    ['Events', (string)($summary['event_count'] ?? 0), 'dispatched'],
+    ['Memory', number_format(((int)($summary['memory_peak_kb'] ?? 0)) / 1024, 1), 'MB peak'],
+    ['FPC', strtoupper((string)($summary['fpc'] ?? '—')), (string)($cache['application'] ?? '')],
+    ['Theme', (string)($summary['theme'] ?? '—'), (string)($summary['stack']['label'] ?? '')],
+    ['Issues', (string)($summary['issue_count'] ?? 0), '≈' . $block->ms($summary['saving_ms'] ?? 0) . ' ms to win'],
+];
+?>
+<div class="mdx-cards">
+    <?php foreach ($cards as [$label, $value, $note]): ?>
+        <div class="mdx-card">
+            <span class="mdx-card__label"><?= $escaper->escapeHtml($label) ?></span>
+            <span class="mdx-card__value"><?= $escaper->escapeHtml($value) ?></span>
+            <span class="mdx-card__note"><?= $escaper->escapeHtml($note) ?></span>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<?php if (!empty($summary['stack']['detail'])): ?>
+    <p><?= $escaper->escapeHtml($summary['stack']['detail']) ?></p>
+<?php endif; ?>
+
+<?php
+$previous = $block->rows('previous');
+
+/** Signed delta, phrased so the sign always means the same thing: minus is better. */
+$delta = static function (float $now, float $then, int $decimals = 1) use ($escaper): string {
+    $diff = $now - $then;
+
+    if (abs($diff) < 0.0001) {
+        return '<span class="mdx-dim">=</span>';
+    }
+
+    $class = $diff > 0 ? 'mdx-bad' : 'mdx-good';
+    $sign = $diff > 0 ? '+' : '−';
+
+    return '<span class="' . $class . '">' . $sign
+        . $escaper->escapeHtml(number_format(abs($diff), $decimals)) . '</span>';
+};
+?>
+<?php if ($previous): ?>
+    <h3><?= $escaper->escapeHtml(__('Against the previous run of this route')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'Same action, same cache status, last time it ran (%1). Comparing a built page '
+            . 'against a cached one would be noise, so only like is compared with like.',
+            (string)$previous['created_at']
+        )) ?>
+    </p>
+    <table>
+        <thead>
+        <tr>
+            <th></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Now')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Previous')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Change')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Time (ms)')) ?></td>
+            <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($summary['duration_ms'] ?? 0)) ?></td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->ms($previous['duration_ms'])) ?></td>
+            <td class="mdx-num"><?= /* @noEscape */ $delta((float)($summary['duration_ms'] ?? 0), (float)$previous['duration_ms']) ?></td>
+        </tr>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Statements')) ?></td>
+            <td class="mdx-num"><?= (int)($summary['query_count'] ?? 0) ?></td>
+            <td class="mdx-num mdx-dim"><?= (int)$previous['query_count'] ?></td>
+            <td class="mdx-num"><?= /* @noEscape */ $delta((float)($summary['query_count'] ?? 0), (float)$previous['query_count'], 0) ?></td>
+        </tr>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Blocks')) ?></td>
+            <td class="mdx-num"><?= (int)($summary['block_count'] ?? 0) ?></td>
+            <td class="mdx-num mdx-dim"><?= (int)$previous['block_count'] ?></td>
+            <td class="mdx-num"><?= /* @noEscape */ $delta((float)($summary['block_count'] ?? 0), (float)$previous['block_count'], 0) ?></td>
+        </tr>
+        <tr>
+            <td><?= $escaper->escapeHtml(__('Findings')) ?></td>
+            <td class="mdx-num"><?= (int)($summary['issue_count'] ?? 0) ?></td>
+            <td class="mdx-num mdx-dim"><?= (int)$previous['issue_count'] ?></td>
+            <td class="mdx-num"><?= /* @noEscape */ $delta((float)($summary['issue_count'] ?? 0), (float)$previous['issue_count'], 0) ?></td>
+        </tr>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Worst findings')) ?></h3>
+<?php if (!$userland): ?>
+    <p><?= $escaper->escapeHtml(__('Nothing crossed a threshold on this request. Open the Issues tab for what core did to itself.')) ?></p>
+<?php else: ?>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Severity')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Finding')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Where')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Saving')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach (array_slice($userland, 0, 5) as $issue): ?>
+            <tr>
+                <td><span class="mdx-sev mdx-sev--<?= $escaper->escapeHtmlAttr($issue['severity']) ?>"><?= $escaper->escapeHtml($issue['severity']) ?></span></td>
+                <td><?= $escaper->escapeHtml($issue['title']) ?></td>
+                <td class="mdx-dim"><?= $escaper->escapeHtml((string)($issue['origin'] ?? $issue['subject'] ?? '')) ?></td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($issue['saving_ms'])) ?> ms</td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<?php $self = $summary['self'] ?? []; ?>
+<?php if ($self): ?>
+    <h3><?= $escaper->escapeHtml(__('What this toolbar cost')) ?></h3>
+    <p>
+        <?= $escaper->escapeHtml(__(
+            'Every number above is inflated by the act of collecting it. This is by how much: '
+            . '%1 ms of the %2 ms total was spent inside this module, so the page did about '
+            . '%3 ms of its own work.',
+            (string)($self['in_page_ms'] ?? 0),
+            (string)($summary['duration_ms'] ?? 0),
+            (string)($self['page_without_ms'] ?? 0)
+        )) ?>
+    </p>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Collector')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Cost')) ?></th>
+            <th><?= $escaper->escapeHtml(__('When')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php
+        $after = ['build' => true, 'store' => true, 'render' => true];
+        $buckets = $self['buckets'] ?? [];
+        arsort($buckets);
+        ?>
+        <?php foreach ($buckets as $name => $ms): ?>
+            <tr>
+                <td><?= $escaper->escapeHtml((string)$name) ?></td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($ms)) ?> ms</td>
+                <td class="mdx-dim">
+                    <?= $escaper->escapeHtml(isset($after[$name])
+                        ? __('after the page was built — delays the response, not counted above')
+                        : __('during the page — included in the timings above')) ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <p class="mdx-dim">
+        <?= $escaper->escapeHtml(__(
+            'Two costs are deliberately NOT in that figure, because they cannot honestly be '
+            . 'measured from inside. Plugin interception: by the time this module\'s code runs, '
+            . 'Magento has already paid to route the call through a plugin, and nothing can time '
+            . 'the cost of being called. And the toolbar cannot time drawing itself. Both are '
+            . 'small and constant, but they are not zero — to remove them entirely, disable the '
+            . 'module rather than switching it off in configuration, because the plugins are '
+            . 'wired at the dependency-injection level and exist either way.'
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Heaviest modules')) ?></h3>
+<?php if (!$modules): ?>
+    <p><?= $escaper->escapeHtml(__('No module accumulated measurable time.')) ?></p>
+<?php else: ?>
+    <table>
+        <thead>
+        <tr>
+            <th><?= $escaper->escapeHtml(__('Module')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Blocks')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Observers')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('SQL')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Total')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($modules as $name => $stats): ?>
+            <tr>
+                <td><?= $escaper->escapeHtml((string)$name) ?></td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['block_ms'])) ?></td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['observer_ms'])) ?></td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($stats['query_ms'])) ?> <span class="mdx-dim">(<?= (int)$stats['query_count'] ?>)</span></td>
+                <td class="mdx-num"><strong><?= $escaper->escapeHtml($block->ms($stats['total_ms'])) ?> ms</strong></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>

@@ -1,0 +1,91 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$queries = $block->rows('queries');
+$grouped = $queries['grouped'] ?? [];
+$threshold = (float)($queries['threshold'] ?? 50);
+?>
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Statements')) ?></span>
+        <span class="mdx-card__value"><?= (int)($queries['total'] ?? 0) ?></span>
+        <span class="mdx-card__note"><?= (int)count($grouped) ?> <?= $escaper->escapeHtml(__('distinct shapes')) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('In the database')) ?></span>
+        <span class="mdx-card__value"><?= $escaper->escapeHtml($block->ms($queries['total_ms'] ?? 0)) ?></span>
+        <span class="mdx-card__note">ms</span>
+    </div>
+</div>
+
+<?php if (!empty($queries['dropped'])): ?>
+    <p class="mdx-warn">
+        <?= $escaper->escapeHtml(__(
+            'This request ran more statements than the recording cap allows, so %1 were not '
+            . 'kept. The totals above cover what was recorded, not the whole request.',
+            (int)$queries['dropped']
+        )) ?>
+    </p>
+<?php endif; ?>
+
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter by SQL, table or call site…')) ?>"/>
+
+<h3><?= $escaper->escapeHtml(__('Grouped by shape, most expensive first')) ?></h3>
+<?php if (!$grouped): ?>
+    <p><?= $escaper->escapeHtml(__('No statements were recorded. Either the page came out of the cache, or the SQL collector is off.')) ?></p>
+<?php else: ?>
+    <table>
+        <thead>
+        <tr>
+            <th class="mdx-num">×</th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Total')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Avg')) ?></th>
+            <th class="mdx-num"><?= $escaper->escapeHtml(__('Max')) ?></th>
+            <th><?= $escaper->escapeHtml(__('Statement')) ?></th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($grouped as $group): ?>
+            <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr($group['sql'] . ' ' . ($group['origin'] ?? '')) ?>">
+                <td class="mdx-num <?= (int)$group['count'] > 5 ? 'mdx-warn' : '' ?>"><?= (int)$group['count'] ?></td>
+                <td class="mdx-num <?= $escaper->escapeHtmlAttr($block->heat($group['total_ms'], $threshold)) ?>">
+                    <?= $escaper->escapeHtml($block->ms($group['total_ms'])) ?>
+                </td>
+                <td class="mdx-num"><?= $escaper->escapeHtml($block->ms($group['avg_ms'])) ?></td>
+                <td class="mdx-num <?= $escaper->escapeHtmlAttr($block->heat($group['max_ms'], $threshold)) ?>">
+                    <?= $escaper->escapeHtml($block->ms($group['max_ms'])) ?>
+                </td>
+                <td>
+                    <code><?= $escaper->escapeHtml($group['sql']) ?></code>
+                    <?php if (!empty($group['origin'])): ?>
+                        <span class="mdx-finding__origin"><?= $escaper->escapeHtml($group['origin']) ?></span>
+                    <?php endif; ?>
+                    <?php if ((int)$group['distinct_binds'] > 1): ?>
+                        <span class="mdx-dim">
+                            <?= $escaper->escapeHtml(__('%1 distinct bound value sets', (int)$group['distinct_binds'])) ?>
+                        </span>
+                    <?php endif; ?>
+                    <?php if (!empty($group['binds'])): ?>
+                        <details>
+                            <summary><?= $escaper->escapeHtml(__('Bound values')) ?></summary>
+                            <pre><?= $escaper->escapeHtml(json_encode(
+                                array_slice($group['binds'], 0, 10),
+                                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR
+                            ) ?: '') ?></pre>
+                        </details>
+                    <?php endif; ?>
+                    <?php if (!empty($group['trail'])): ?>
+                        <details>
+                            <summary><?= $escaper->escapeHtml(__('Call trail')) ?></summary>
+                            <pre><?php foreach ($group['trail'] as $frame): ?><?= $escaper->escapeHtml($frame) . "\n" ?><?php endforeach; ?></pre>
+                        </details>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php endif; ?>

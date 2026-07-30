@@ -1,0 +1,77 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$events = $block->rows('events');
+$observers = $block->rows('observers');
+$threshold = (float)($observers['threshold'] ?? 30);
+?>
+<div class="mdx-cards">
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Dispatches')) ?></span>
+        <span class="mdx-card__value"><?= (int)($events['total'] ?? 0) ?></span>
+        <span class="mdx-card__note"><?= (int)($events['distinct'] ?? 0) ?> <?= $escaper->escapeHtml(__('distinct')) ?></span>
+    </div>
+    <div class="mdx-card">
+        <span class="mdx-card__label"><?= $escaper->escapeHtml(__('Observer calls')) ?></span>
+        <span class="mdx-card__value"><?= (int)($observers['total'] ?? 0) ?></span>
+    </div>
+</div>
+
+<input type="search" class="mdx-filter" placeholder="<?= $escaper->escapeHtmlAttr(__('Filter events and observers…')) ?>"/>
+
+<h3><?= $escaper->escapeHtml(__('Observers, slowest first')) ?></h3>
+<table>
+    <thead>
+    <tr>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Time')) ?></th>
+        <th class="mdx-num">×</th>
+        <th><?= $escaper->escapeHtml(__('Observer')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Event')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($observers['grouped'] ?? [] as $row): ?>
+        <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr(($row['name'] ?? '') . ' ' . ($row['event'] ?? '') . ' ' . ($row['class'] ?? '')) ?>">
+            <td class="mdx-num <?= $escaper->escapeHtmlAttr($block->heat($row['ms'], $threshold)) ?>">
+                <?= $escaper->escapeHtml($block->ms($row['ms'])) ?>
+            </td>
+            <td class="mdx-num mdx-dim"><?= (int)$row['count'] ?></td>
+            <td>
+                <?= $escaper->escapeHtml((string)$row['name']) ?>
+                <span class="mdx-finding__origin"><?= $escaper->escapeHtml((string)$row['class']) ?></span>
+            </td>
+            <td class="mdx-dim"><code><?= $escaper->escapeHtml((string)$row['event']) ?></code></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<h3><?= $escaper->escapeHtml(__('Events, most dispatched first')) ?></h3>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'Time is inclusive — an observer that dispatches its own event has that cost counted '
+        . 'under both names. What this list is for is the count: an event firing thousands of '
+        . 'times is a loop somebody did not mean to write.'
+    )) ?>
+</p>
+<table>
+    <thead>
+    <tr>
+        <th class="mdx-num">×</th>
+        <th class="mdx-num"><?= $escaper->escapeHtml(__('Time')) ?></th>
+        <th><?= $escaper->escapeHtml(__('Event')) ?></th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($events['events'] ?? [] as $row): ?>
+        <tr data-mdx-filterable="<?= $escaper->escapeHtmlAttr((string)$row['name']) ?>">
+            <td class="mdx-num <?= (int)$row['count'] > 100 ? 'mdx-warn' : '' ?>"><?= (int)$row['count'] ?></td>
+            <td class="mdx-num mdx-dim"><?= $escaper->escapeHtml($block->ms($row['ms'])) ?></td>
+            <td><code><?= $escaper->escapeHtml((string)$row['name']) ?></code></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>

@@ -1,0 +1,158 @@
+<?php
+/**
+ * @var \Modracx\FrontendDevTools\Block\Panel $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+
+$env = $block->rows('environment');
+$summary = $block->rows('summary');
+
+$yesNo = static fn (mixed $value): string => $value ? 'on' : 'off';
+
+$rows = [
+    [__('Magento'), ($env['magento'] ?? '?') . ' ' . ($env['edition'] ?? ''), ''],
+    [__('PHP'), $env['php'] ?? '?', ($env['xdebug'] ?? false) ? __('Xdebug is loaded — every number in this toolbar is inflated by it.') : ''],
+    [__('Mode'), $env['mode'] ?? '?', ''],
+    [__('OPcache'), $yesNo($env['opcache'] ?? false), ($env['opcache'] ?? false) ? '' : __('Off. Expect PHP timings well above what production would show.')],
+    [__('Memory limit'), $env['memory_limit'] ?? '?', ''],
+    [__('Theme'), $env['theme'] ?? '?', (string)($summary['stack']['label'] ?? '')],
+    [__('Locale'), $env['locale'] ?? '?', ''],
+    [__('Store / currency'), ($env['store'] ?? '?') . ' / ' . ($env['currency'] ?? '?'), ''],
+];
+
+$frontendRows = [
+    [__('JS minify'), $yesNo($env['js_minify'] ?? false)],
+    [__('JS merge'), $yesNo($env['js_merge'] ?? false)],
+    [__('JS bundling'), $yesNo($env['js_bundling'] ?? false)],
+    [__('CSS minify'), $yesNo($env['css_minify'] ?? false)],
+    [__('CSS merge'), $yesNo($env['css_merge'] ?? false)],
+    [__('Sign static files'), $yesNo($env['static_signing'] ?? false)],
+    [__('Core template hints'), $yesNo($env['template_hints_core'] ?? false)],
+];
+?>
+<?php
+$audit = $block->rows('audit');
+$findings = $audit['findings'] ?? [];
+$php = $audit['php'] ?? [];
+?>
+<h3><?= $escaper->escapeHtml(__('Runtime health')) ?></h3>
+<?php if (!$findings): ?>
+    <p class="mdx-good">
+        <?= $escaper->escapeHtml(__('Nothing measured here is holding the site back.')) ?>
+    </p>
+<?php else: ?>
+    <?php foreach ($findings as $finding): ?>
+        <div class="mdx-finding mdx-finding--<?= $escaper->escapeHtmlAttr($finding['severity']) ?>">
+            <div class="mdx-finding__head">
+                <span class="mdx-sev mdx-sev--<?= $escaper->escapeHtmlAttr($finding['severity']) ?>">
+                    <?= $escaper->escapeHtml($finding['severity']) ?>
+                </span>
+                <span class="mdx-finding__title"><?= $escaper->escapeHtml($finding['title']) ?></span>
+            </div>
+            <p><?= $escaper->escapeHtml($finding['detail']) ?></p>
+            <p class="mdx-finding__fix"><?= $escaper->escapeHtml($finding['fix']) ?></p>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
+<?php if (!empty($php['opcache_enabled'])): ?>
+    <h3><?= $escaper->escapeHtml(__('OPcache')) ?></h3>
+    <table>
+        <tbody>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(__('Memory')) ?></td>
+            <td>
+                <span class="<?= (float)($php['opcache_full_pct'] ?? 0) >= 95 ? 'mdx-bad' : '' ?>">
+                    <?= $escaper->escapeHtml((string)($php['opcache_used_mb'] ?? '?')) ?> MB
+                    <?= $escaper->escapeHtml(__('used of')) ?>
+                    <?= $escaper->escapeHtml((string)($php['opcache_memory_mb'] ?? '?')) ?> MB
+                </span>
+                <span class="mdx-dim">
+                    (<?= $escaper->escapeHtml((string)($php['opcache_free_mb'] ?? '?')) ?> MB <?= $escaper->escapeHtml(__('free')) ?>,
+                    <?= $escaper->escapeHtml((string)($php['opcache_wasted_mb'] ?? '?')) ?> MB <?= $escaper->escapeHtml(__('wasted')) ?>)
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(__('Restarts')) ?></td>
+            <td class="<?= (int)($php['opcache_restarts'] ?? 0) > 0 ? 'mdx-bad' : 'mdx-good' ?>">
+                <?= (int)($php['opcache_restarts'] ?? 0) ?>
+            </td>
+        </tr>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(__('Cached scripts')) ?></td>
+            <td>
+                <?= (int)($php['opcache_cached_scripts'] ?? 0) ?>
+                <span class="mdx-dim">/ <?= (int)($php['opcache_max_files'] ?? 0) ?></span>
+            </td>
+        </tr>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(__('Hit rate')) ?></td>
+            <td><?= $escaper->escapeHtml((string)($php['opcache_hit_rate'] ?? '?')) ?>%</td>
+        </tr>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml(__('realpath cache')) ?></td>
+            <td>
+                <?= $escaper->escapeHtml((string)($php['realpath_size'] ?? '?')) ?>
+                <?= $escaper->escapeHtml(__('ttl')) ?> <?= (int)($php['realpath_ttl'] ?? 0) ?>s
+                <?php if (!empty($php['realpath_used'])): ?>
+                    <span class="mdx-dim">(<?= $escaper->escapeHtml($block->bytes($php['realpath_used'])) ?> <?= $escaper->escapeHtml(__('in use')) ?>)</span>
+                <?php endif; ?>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+<?php endif; ?>
+
+<h3><?= $escaper->escapeHtml(__('Runtime')) ?></h3>
+<table>
+    <tbody>
+    <?php foreach ($rows as [$label, $value, $note]): ?>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml((string)$label) ?></td>
+            <td><code><?= $escaper->escapeHtml((string)$value) ?></code></td>
+            <td class="mdx-warn"><?= $escaper->escapeHtml((string)$note) ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
+<h3><?= $escaper->escapeHtml(__('Frontend build settings')) ?></h3>
+<table>
+    <tbody>
+    <?php foreach ($frontendRows as [$label, $value]): ?>
+        <tr>
+            <td class="mdx-dim"><?= $escaper->escapeHtml((string)$label) ?></td>
+            <td class="<?= $value === 'on' ? 'mdx-good' : 'mdx-dim' ?>"><code><?= $escaper->escapeHtml($value) ?></code></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<p>
+    <?= $escaper->escapeHtml(__(
+        'These are the settings that make a development page perform nothing like the same '
+        . 'page in production — worth reading before drawing conclusions from the timings.'
+    )) ?>
+</p>
+
+<h3><?= $escaper->escapeHtml(__('Request')) ?></h3>
+<table>
+    <tbody>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('URL')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($summary['url'] ?? '')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Action')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($summary['full_action'] ?? '')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Status')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($summary['status_code'] ?? '')) ?></code></td>
+    </tr>
+    <tr>
+        <td class="mdx-dim"><?= $escaper->escapeHtml(__('Profile token')) ?></td>
+        <td><code><?= $escaper->escapeHtml((string)($summary['token'] ?? '')) ?></code></td>
+    </tr>
+    </tbody>
+</table>
