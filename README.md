@@ -279,4 +279,4 @@ Clear caches after disabling to remove toolbar assets from storefront pages.
 
 ## Happy profiling!
 
-Elevate your storefront performance analysis with **Modracx Frontend Dev Tools**. For updates, documentation, or support, visit the [Modracx Portal](https://modracx.dpdns.org/) or check the repository.
+Elevate your storefront performance analysis with **Modracx Frontend Dev Tools**. For updates, documentation, or support, visit the [Modracx Portal](https://modracx.com/) or check the repository.
