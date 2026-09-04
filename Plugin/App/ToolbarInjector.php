@@ -49,47 +49,38 @@ class ToolbarInjector
     ) {
     }
 
-    public function afterLaunch(Http $subject, ResponseInterface $result): ResponseInterface
+    public function beforeSendResponse(\Magento\Framework\App\Response\Http $subject)
     {
         if (!$this->shouldRun()) {
-            return $result;
+            return null;
         }
 
         try {
-            // Nothing recorded from here on belongs to the page — the numbers would start
-            // describing the profiler's own work.
             $this->context->freeze();
-
             $token = $this->context->token();
 
-            // Timed even though it happens after the page is built: it still delays the
-            // response reaching the browser, and a profiler that hides its own cost has no
-            // business reporting anybody else's.
             $startedAt = microtime(true);
-            $profile = $this->builder->build($result);
+            $profile = $this->builder->build($subject);
             $this->context->addOverhead('build', (microtime(true) - $startedAt) * 1000);
 
             $startedAt = microtime(true);
             $this->repository->save($token, $profile, $this->remoteAddress->getRemoteAddress() ?: null);
             $this->context->addOverhead('store', (microtime(true) - $startedAt) * 1000);
 
-            if (method_exists($result, 'setHeader')) {
-                // Lets the toolbar pick up profiles for requests that have no page of their
-                // own: section loads, add-to-cart, GraphQL.
-                $result->setHeader('X-Modracx-Profile', $token, true);
-            }
+            $subject->setHeader('X-Modracx-Profile', $token, true);
 
-            if ($this->isInjectable($result)) {
+            if ($this->isInjectable($subject)) {
                 $startedAt = microtime(true);
-                $this->inject($result, $profile);
+                $this->inject($subject, $profile);
                 $this->context->addOverhead('render', (microtime(true) - $startedAt) * 1000);
             }
         } catch (\Throwable $e) {
             $this->logger->debug('Modracx_FrontendDevTools could not render the toolbar: ' . $e->getMessage());
         }
 
-        return $result;
+        return null;
     }
+
 
     /**
      * @param array<string, mixed> $profile

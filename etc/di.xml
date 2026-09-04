@@ -19,7 +19,7 @@
         plugin on either of them would never be generated. Each checks the area itself and
         does nothing anywhere but the storefront.
     -->
-    <type name="Magento\Framework\App\Http">
+    <type name="Magento\Framework\App\Response\Http">
         <plugin name="modracx_fdt_toolbar_injector"
                 type="Modracx\FrontendDevTools\Plugin\App\ToolbarInjector"
                 sortOrder="1000"/>
